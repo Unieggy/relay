@@ -533,18 +533,43 @@ export function App() {
   const bench = deriveBench(isLive ? events : demoEvents, packet);
   const selectedActiveAgent = isLive && events.length ? activeAgent(events) : initialAgent;
   const switchTarget = otherAgent(selectedActiveAgent);
+  const hasNativePicker =
+    typeof window !== "undefined" && Boolean(window.relay?.pickWorkspace);
+  async function browseWorkspace(): Promise<void> {
+    const picked = await window.relay?.pickWorkspace?.();
+    if (typeof picked === "string") setWorkspaceDir(picked);
+  }
   const controls = (
     <div className="controls" aria-label="Session controls">
       {!isLive ? (
         <>
           <label className="field">
             <span>Workspace</span>
-            <input
-              value={workspaceDir}
-              onChange={(event) => setWorkspaceDir(event.target.value)}
-              disabled={pendingAction !== null}
-              placeholder="path the agents work in"
-            />
+            {hasNativePicker ? (
+              <div className="input-row">
+                <input
+                  value={workspaceDir}
+                  onChange={(event) => setWorkspaceDir(event.target.value)}
+                  disabled={pendingAction !== null}
+                  placeholder="path the agents work in"
+                />
+                <button
+                  type="button"
+                  className="action"
+                  onClick={browseWorkspace}
+                  disabled={pendingAction !== null}
+                >
+                  Browse…
+                </button>
+              </div>
+            ) : (
+              <input
+                value={workspaceDir}
+                onChange={(event) => setWorkspaceDir(event.target.value)}
+                disabled={pendingAction !== null}
+                placeholder="path the agents work in"
+              />
+            )}
           </label>
           <div className="chips" role="group" aria-label="Workspace presets">
             {["demo-repo", "."].map((preset) => (

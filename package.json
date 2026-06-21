@@ -13,6 +13,7 @@
     "ui:build": "tsc -p ui/tsconfig.json && vite build --config ui/vite.config.ts",
     "demo": "node scripts/demo.mjs",
     "sidebar": "node scripts/sidebar.mjs",
+    "desktop": "electron electron/main.cjs",
     "demo:redis": "tsx redis-demo.ts",
     "ws:client": "tsx ws-test-client.ts",
     "ws:test": "node --import tsx --test ws-test-client.test.ts"
@@ -27,6 +28,7 @@
     "@types/react-dom": "^19.2.3",
     "@types/ws": "^8.18.1",
     "@vitejs/plugin-react": "^6.0.2",
+    "electron": "^41.7.1",
     "ts-node": "^10.9.2",
     "tsx": "^4.22.4",
     "typescript": "^6.0.3",

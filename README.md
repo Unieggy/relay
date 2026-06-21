@@ -40,9 +40,22 @@ npm run demo       # in one shell (server + UI)
 npm run sidebar    # in another — opens the rail-only companion
 ```
 
-Or open the rail-only view in any browser:
-`http://127.0.0.1:4173/?rail=1`. (A standalone Electron/VS-code wrapper is the
-next step — both reuse this same view, no rewrite.)
+Or open the rail-only view in any browser: `http://127.0.0.1:4173/?rail=1`.
+
+### Desktop companion (Electron)
+
+A real always-on-top window that snaps to a screen edge — the "magnet"
+companion — and adds a native folder picker for the workspace:
+
+```bash
+npm run demo                 # server + UI
+npm run desktop              # docks to the right edge
+RELAY_DOCK=left  npm run desktop
+RELAY_DOCK=float npm run desktop
+```
+
+Same React UI as the browser — no rewrite. Inside the desktop app the Workspace
+field gains a **Browse…** button (native OS folder dialog).
 
 ## The demo flow
 
