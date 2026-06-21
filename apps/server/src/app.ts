@@ -22,6 +22,7 @@ import {
   type EventStore,
 } from "./orchestrator";
 import { ClaudeAdapter, CodexAdapter } from "./adapters";
+import { RedisEventStore } from "./event-store";
 import { createApiRouter, type ApiHandler } from "./routes";
 
 export interface AppOptions {
@@ -79,7 +80,10 @@ async function route(
 export function createApp(env: Env, opts: AppOptions = {}): http.Server {
   const sessions = opts.sessions ?? new SessionManager();
   const broadcaster = opts.broadcaster ?? new SessionBroadcaster();
-  const store = opts.store ?? new InMemoryEventStore();
+  // Durable Redis store when REDIS_URL is set; in-memory otherwise (dev/tests).
+  const store =
+    opts.store ??
+    (env.REDIS_URL ? new RedisEventStore(env.REDIS_URL) : new InMemoryEventStore());
   const orchestrator =
     opts.orchestrator ??
     new Orchestrator({

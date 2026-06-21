@@ -18,6 +18,9 @@ const EnvSchema = z.object({
   PORT: z.coerce.number().int().min(0).max(65535).default(4000),
   /** Origin of the Relay dashboard — used later for CORS / WS allow-listing. */
   WEB_URL: z.url().default("http://localhost:3000"),
+  /** Redis connection for the durable event store. When unset, events are kept
+   *  in memory (fine for dev/tests; lost on restart). Set it to enable Redis. */
+  REDIS_URL: z.url().optional(),
   NODE_ENV: z
     .enum(["development", "test", "production"])
     .default("development"),

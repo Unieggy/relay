@@ -102,7 +102,9 @@ export async function handleControlRoutes(
     }
     case "events": {
       requireMethod(req, "GET", pathname);
-      sendJson(res, 200, { events: await orch.getEvents(id) });
+      const { searchParams } = new URL(req.url ?? "/", "http://localhost");
+      const after = searchParams.get("after") ?? undefined;
+      sendJson(res, 200, { events: await orch.getEvents(id, after) });
       return true;
     }
     default:

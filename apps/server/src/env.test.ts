@@ -26,11 +26,17 @@ test("loadEnv rejects an unknown NODE_ENV", () => {
   assert.throws(() => loadEnv({ NODE_ENV: "staging" }), /NODE_ENV/);
 });
 
+test("loadEnv rejects a malformed REDIS_URL", () => {
+  assert.throws(() => loadEnv({ REDIS_URL: "not-a-url" }), /REDIS_URL/);
+});
+
 test("loadEnv applies defaults when vars are absent", () => {
   const env = loadEnv({});
   assert.equal(env.PORT, 4000);
   assert.equal(env.WEB_URL, "http://localhost:3000");
   assert.equal(env.NODE_ENV, "development");
+  // REDIS_URL is opt-in: unset → the in-memory store is used.
+  assert.equal(env.REDIS_URL, undefined);
 });
 
 test("loadEnv coerces a valid PORT string to a number", () => {

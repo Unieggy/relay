@@ -63,7 +63,11 @@ export type CreateHandoff = (
  */
 export interface EventStore {
   appendEvent(sessionId: string, event: RelayEvent): void | Promise<void>;
-  readEvents(sessionId: string): RelayEvent[] | Promise<RelayEvent[]>;
+  /** Ordered timeline; with `after` (a RelayEvent id), only events past it. */
+  readEvents(
+    sessionId: string,
+    after?: string
+  ): RelayEvent[] | Promise<RelayEvent[]>;
   saveHandoff(sessionId: string, packet: HandoffPacket): void | Promise<void>;
   loadHandoff(
     sessionId: string
@@ -222,9 +226,9 @@ export class Orchestrator {
     };
   }
 
-  /** The ordered event timeline for a session. */
-  async getEvents(sessionId: string): Promise<RelayEvent[]> {
-    return this.deps.store.readEvents(sessionId);
+  /** The ordered event timeline for a session, optionally after a cursor. */
+  async getEvents(sessionId: string, after?: string): Promise<RelayEvent[]> {
+    return this.deps.store.readEvents(sessionId, after);
   }
 
   // --- internals ----------------------------------------------------------
@@ -322,8 +326,11 @@ export class InMemoryEventStore implements EventStore {
     list.push(event);
     this.events.set(sessionId, list);
   }
-  readEvents(sessionId: string): RelayEvent[] {
-    return [...(this.events.get(sessionId) ?? [])];
+  readEvents(sessionId: string, after?: string): RelayEvent[] {
+    const all = [...(this.events.get(sessionId) ?? [])];
+    if (!after) return all;
+    const idx = all.findIndex((e) => e.id === after);
+    return idx === -1 ? all : all.slice(idx + 1);
   }
   saveHandoff(sessionId: string, packet: HandoffPacket): void {
     this.handoffs.set(sessionId, packet);
