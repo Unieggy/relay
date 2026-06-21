@@ -21,8 +21,26 @@ export function eventLine(e: RelayEventT): Line {
       return { kind: "prompt", value: `$ relay start — ${e.agent ?? "claude"}` };
     case "agent.started":
       return { kind: "prompt", value: `$ ${e.agent ?? "agent"} running` };
-    case "terminal.output":
-      return { kind: "plain", value: s(p, "message") ?? s(p, "line") ?? "" };
+    case "process.started":
+      return {
+        kind: "prompt",
+        value: `$ ${[s(p, "command"), s(p, "args")].filter(Boolean).join(" ") || "process"}`,
+      };
+    case "terminal.output": {
+      // The process runner streams `{ stream, chunk }`; older sources use message/line.
+      const text = s(p, "chunk") ?? s(p, "message") ?? s(p, "line") ?? "";
+      return {
+        kind: p.stream === "stderr" ? "fail" : "plain",
+        value: text.replace(/\n+$/, ""),
+      };
+    }
+    case "process.exited": {
+      const ok = p.exitCode === 0;
+      return {
+        kind: ok ? "pass" : "fail",
+        value: `${ok ? "✔" : "✖"} exited (code ${s(p, "exitCode") ?? "?"}${p.timedOut ? ", timed out" : ""})`,
+      };
+    }
     case "command.finished": {
       const ok = p.exitCode === 0;
       return {
