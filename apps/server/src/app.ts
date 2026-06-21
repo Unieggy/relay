@@ -22,7 +22,7 @@ import {
   compressorCreateHandoff,
   type EventStore,
 } from "./orchestrator";
-import { ClaudeAdapter, CodexAdapter } from "./adapters";
+import { ClaudeAdapter, CodexAdapter, FakeAgentAdapter } from "./adapters";
 import { RedisEventStore } from "./event-store";
 import { createApiRouter, type ApiHandler } from "./routes";
 
@@ -122,13 +122,31 @@ export function createAppRuntime(
     store ??= env.REDIS_URL
       ? new RedisEventStore(env.REDIS_URL)
       : new InMemoryEventStore();
+    // Fake agents run the full loop deterministically (no provider CLI/auth);
+    // real adapters spawn the actual Claude/Codex CLIs and are the default.
+    const adapters = env.RELAY_FAKE_AGENTS
+      ? {
+          claude: () =>
+            new FakeAgentAdapter({
+              id: "claude",
+              displayName: "Claude (fake)",
+              models: ["claude-opus-4-8"],
+            }),
+          codex: () =>
+            new FakeAgentAdapter({
+              id: "codex",
+              displayName: "Codex (fake)",
+              models: ["gpt-5-codex"],
+            }),
+        }
+      : {
+          claude: () => new ClaudeAdapter(),
+          codex: () => new CodexAdapter(),
+        };
     orchestrator = new Orchestrator({
       sessions,
       store,
-      adapters: {
-        claude: () => new ClaudeAdapter(),
-        codex: () => new CodexAdapter(),
-      },
+      adapters,
       createHandoff: compressorCreateHandoff,
       // Live events flow to any WS clients subscribed to the session.
       onEvent: (event) => {
