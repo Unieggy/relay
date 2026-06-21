@@ -1,9 +1,15 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { demoEvents, demoPacket } from "./demo";
-
-type Phase = "working" | "switching" | "resumed";
-type LineKind = "plain" | "muted" | "prompt" | "pass" | "fail" | "relay";
-type Line = { kind: LineKind; value: string };
+import { useRelayStream } from "./useRelayStream";
+import {
+  activeAgent,
+  derivePhase,
+  eventLine,
+  migrationState,
+  packetReady,
+  type Line,
+  type Phase,
+} from "./live";
 
 type IconName = "arrow" | "check" | "cross" | "spark" | "shield" | "file";
 
@@ -106,29 +112,42 @@ function Rail({
   phase,
   handoffDone,
   onSwitch,
+  live = false,
+  agentName,
+  migration,
+  sessionLabel = "session 7f3a",
 }: {
   phase: Phase;
   handoffDone: boolean;
   onSwitch: () => void;
+  live?: boolean;
+  agentName?: "claude" | "codex";
+  migration?: "pass" | "fail" | "pending";
+  sessionLabel?: string;
 }) {
-  const agent =
-    phase === "resumed"
-      ? { name: "Codex", model: "GPT-5", letter: "X", tone: "codex" }
-      : { name: "Claude", model: "Opus 4.8", letter: "C", tone: "claude" };
+  const isCodex = agentName ? agentName === "codex" : phase === "resumed";
+  const agent = isCodex
+    ? { name: "Codex", model: "GPT-5", letter: "X", tone: "codex" }
+    : { name: "Claude", model: "Opus 4.8", letter: "C", tone: "claude" };
 
   const status =
     phase === "switching"
       ? "relaying context…"
       : phase === "resumed"
         ? "resumed · working"
-        : "usage limit reached";
+        : live
+          ? "running"
+          : "usage limit reached";
+
+  // Verification: explicit override in live mode, else derived from phase.
+  const migrationOk = migration ? migration === "pass" : phase === "resumed";
 
   return (
     <aside className="rail" aria-label="Relay">
       <header className="rail-head">
         <span className="dot" />
         <strong>Relay</strong>
-        <span className="session">session 7f3a</span>
+        <span className="session">{sessionLabel}</span>
       </header>
 
       <div className="rail-body">
@@ -175,8 +194,8 @@ function Rail({
             TypeScript
           </div>
           <div className="check">
-            <span className={phase === "resumed" ? "ok" : "bad"}>
-              <Icon name={phase === "resumed" ? "check" : "cross"} size={12} />
+            <span className={migrationOk ? "ok" : "bad"}>
+              <Icon name={migrationOk ? "check" : "cross"} size={12} />
             </span>
             Migration test
           </div>
@@ -187,16 +206,17 @@ function Rail({
         <button
           className="switch"
           onClick={onSwitch}
-          disabled={phase !== "working"}
+          disabled={live || phase !== "working"}
         >
           {phase === "working" && (
             <>
-              <Icon name="spark" size={14} /> Create handoff
+              {live ? null : <Icon name="spark" size={14} />}{" "}
+              {live ? "Live · waiting for handoff" : "Create handoff"}
             </>
           )}
           {phase === "switching" && (
             <>
-              <span className="spinner" /> Relaying…
+              <span className="spinner" /> {live ? "Relaying…" : "Relaying…"}
             </>
           )}
           {phase === "resumed" && (
@@ -210,22 +230,56 @@ function Rail({
   );
 }
 
+// ?live=<sessionId>&ws=<wsBase> switches the UI to the real broadcaster.
+function liveConfig(): { sessionId: string | null; base: string } {
+  if (typeof window === "undefined") return { sessionId: null, base: "ws://127.0.0.1:4000" };
+  const params = new URLSearchParams(window.location.search);
+  return {
+    sessionId: params.get("live"),
+    base: params.get("ws") ?? "ws://127.0.0.1:4000",
+  };
+}
+
 export function App() {
-  const [phase, setPhase] = useState<Phase>("working");
-  const [lines, setLines] = useState<Line[]>(claudeLines);
+  const { sessionId, base } = liveConfig();
+  const isLive = sessionId !== null;
+
+  // Live mode: events come from the server broadcaster.
+  const { events, status } = useRelayStream(sessionId, base);
+
+  // Demo mode: scripted Claude → Codex handoff (works offline).
+  const [demoPhase, setDemoPhase] = useState<Phase>("working");
+  const [demoLines, setDemoLines] = useState<Line[]>(claudeLines);
 
   function runHandoff() {
-    if (phase !== "working") return;
-    setPhase("switching");
-
-    // Stream Codex's continuation into the same terminal, line by line.
+    if (demoPhase !== "working") return;
+    setDemoPhase("switching");
     codexLines.forEach((line, i) => {
       window.setTimeout(() => {
-        setLines((prev) => [...prev, line]);
-        if (i === codexLines.length - 1) setPhase("resumed");
+        setDemoLines((prev) => [...prev, line]);
+        if (i === codexLines.length - 1) setDemoPhase("resumed");
       }, 450 * (i + 1));
     });
   }
+
+  // Resolve what the panels render, from whichever mode is active.
+  const liveLines: Line[] = events.length
+    ? events.map(eventLine)
+    : [
+        {
+          kind: "muted",
+          value:
+            status === "open"
+              ? `connected · waiting for events on ${sessionId}…`
+              : status === "error" || status === "closed"
+                ? `broadcaster unavailable (${base}) — start the server`
+                : `connecting to ${base}…`,
+        },
+      ];
+
+  const phase: Phase = isLive ? derivePhase(events) : demoPhase;
+  const lines = isLive ? liveLines : demoLines;
+  const handoffDone = isLive ? packetReady(events) : demoPhase !== "working";
 
   return (
     <main className="shell">
@@ -233,8 +287,12 @@ export function App() {
         <Terminal lines={lines} phase={phase} />
         <Rail
           phase={phase}
-          handoffDone={phase !== "working"}
+          handoffDone={handoffDone}
           onSwitch={runHandoff}
+          live={isLive}
+          agentName={isLive ? activeAgent(events) : undefined}
+          migration={isLive ? migrationState(events) : undefined}
+          sessionLabel={isLive ? `session ${sessionId}` : "session 7f3a"}
         />
       </div>
       <footer className="note">
