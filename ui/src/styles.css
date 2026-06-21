@@ -304,7 +304,7 @@ svg { flex: 0 0 auto; }
 .verify small {
   color: var(--faint); font-size: 9px; font-weight: 700; letter-spacing: 0.13em; margin-bottom: 1px;
 }
-.check { display: flex; align-items: center; gap: 9px; font-size: 12px; color: var(--soft); }
+.check { display: flex; align-items: center; gap: 9px; min-width: 0; font-size: 12px; color: var(--soft); }
 .check .ok, .check .bad, .check .pending { width: 18px; height: 18px; border-radius: var(--r-sm); display: grid; place-items: center; }
 .check .ok { color: var(--green); background: rgba(74, 222, 128, 0.12); }
 .check .bad { color: var(--red); background: rgba(248, 113, 113, 0.12); }
@@ -320,6 +320,7 @@ svg { flex: 0 0 auto; }
   white-space: nowrap;
 }
 .check-state {
+  flex: 0 0 auto;
   font-size: 9px;
   font-weight: 700;
   text-transform: uppercase;

@@ -128,6 +128,34 @@ test("writes to stdin and the process consumes it", async () => {
   assert.match(stdout, /got:ping/);
 });
 
+test("ignored stdin behaves like /dev/null for one-shot commands", async () => {
+  const events: RelayEvent[] = [];
+  const handle = startProcess(
+    {
+      sessionId: "s-ignore-stdin",
+      command: NODE,
+      args: [
+        "-e",
+        'process.stdin.on("end",()=>process.stdout.write("stdin-closed"));process.stdin.resume();',
+      ],
+      cwd: process.cwd(),
+      stdin: "ignore",
+    },
+    (event) => events.push(event)
+  );
+
+  assert.equal(handle.write("unused\n"), false);
+  const result = await handle.done;
+  assert.equal(result.exitCode, 0);
+  assert.match(
+    events
+      .filter((event) => event.type === "terminal.output")
+      .map((event) => payload(event).chunk)
+      .join(""),
+    /stdin-closed/
+  );
+});
+
 test("terminate() stops a long-running process safely", async () => {
   const events: RelayEvent[] = [];
   const handle = startProcess(

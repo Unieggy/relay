@@ -18,6 +18,7 @@ function cleanActivity(text: string): string {
     .map((line) => line.trim())
     .filter(Boolean);
   const latest = lines.at(-1) ?? "";
+  if (/^Warning: no stdin data received in 3s/i.test(latest)) return "";
   return latest.length > 120 ? `${latest.slice(0, 117)}…` : latest;
 }
 

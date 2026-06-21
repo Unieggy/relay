@@ -49,6 +49,8 @@ export interface ProcessRunOptions {
   maxOutputBytes?: number;
   /** Optional agent tag stamped onto every emitted event. */
   agent?: AgentId;
+  /** Keep stdin writable. Disable for one-shot CLIs whose prompt is in argv. */
+  stdin?: "pipe" | "ignore";
 }
 
 export interface ProcessResult {
@@ -105,7 +107,7 @@ export function startProcess(
   const child = spawn(opts.command, opts.args ?? [], {
     cwd: opts.cwd,
     env: opts.env ?? process.env,
-    stdio: ["pipe", "pipe", "pipe"],
+    stdio: [opts.stdin ?? "pipe", "pipe", "pipe"],
   });
 
   emit("process.started", {

@@ -133,6 +133,12 @@ export abstract class ProcessAgentAdapter implements AgentAdapter {
           cwd: opts.cwd,
           agent: this.agent,
           env: this.spawnEnv(opts),
+          // Headless Claude/Codex prompts live in argv. Explicitly attach
+          // /dev/null so the CLIs do not pause and warn while waiting on stdin.
+          stdin:
+            plan.stdinPrompt !== undefined || this.capabilities().supportsInput
+              ? "pipe"
+              : "ignore",
         },
         sink
       );
