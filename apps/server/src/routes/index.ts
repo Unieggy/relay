@@ -11,11 +11,15 @@
 import * as http from "node:http";
 import { notFound } from "../errors";
 import type { SessionManager } from "../session-manager";
+import type { Orchestrator } from "../orchestrator";
 import { handleSessionRoutes } from "./sessions";
+import { handleControlRoutes } from "./control";
 import { sendError } from "./respond";
 
 export interface ApiDeps {
   sessions: SessionManager;
+  /** Required for the control routes (start/input/handoff/codex/verify/diff/events). */
+  orchestrator?: Orchestrator;
 }
 
 export type ApiHandler = (
@@ -26,7 +30,9 @@ export type ApiHandler = (
 export function createApiRouter(deps: ApiDeps): ApiHandler {
   return async (req, res) => {
     try {
-      const handled = await handleSessionRoutes(req, res, deps);
+      const handled =
+        (await handleSessionRoutes(req, res, deps)) ||
+        (await handleControlRoutes(req, res, deps));
       if (!handled) {
         throw notFound(`No route for ${req.method} ${req.url}`);
       }
@@ -37,3 +43,4 @@ export function createApiRouter(deps: ApiDeps): ApiHandler {
 }
 
 export { handleSessionRoutes } from "./sessions";
+export { handleControlRoutes } from "./control";

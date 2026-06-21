@@ -15,11 +15,20 @@ import type { Env } from "./env";
 import { methodNotAllowed, notFound, toErrorResponse } from "./errors";
 import { SessionBroadcaster } from "./broadcaster";
 import { SessionManager } from "./session-manager";
+import {
+  Orchestrator,
+  InMemoryEventStore,
+  fallbackCreateHandoff,
+  type EventStore,
+} from "./orchestrator";
+import { ClaudeAdapter, CodexAdapter } from "./adapters";
 import { createApiRouter, type ApiHandler } from "./routes";
 
 export interface AppOptions {
   sessions?: SessionManager;
   broadcaster?: SessionBroadcaster;
+  store?: EventStore;
+  orchestrator?: Orchestrator;
 }
 
 function sendJson(
@@ -70,7 +79,27 @@ async function route(
 export function createApp(env: Env, opts: AppOptions = {}): http.Server {
   const sessions = opts.sessions ?? new SessionManager();
   const broadcaster = opts.broadcaster ?? new SessionBroadcaster();
-  const api = createApiRouter({ sessions });
+  const store = opts.store ?? new InMemoryEventStore();
+  const orchestrator =
+    opts.orchestrator ??
+    new Orchestrator({
+      sessions,
+      store,
+      adapters: {
+        claude: () => new ClaudeAdapter(),
+        codex: () => new CodexAdapter(),
+      },
+      createHandoff: fallbackCreateHandoff,
+      // Live events flow to any WS clients subscribed to the session.
+      onEvent: (event) => {
+        try {
+          broadcaster.broadcast(event);
+        } catch {
+          /* never let a broadcast failure break the run */
+        }
+      },
+    });
+  const api = createApiRouter({ sessions, orchestrator });
 
   const server = http.createServer((req, res) => {
     route(req, res, env, api).catch((err) => {

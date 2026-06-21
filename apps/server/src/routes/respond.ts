@@ -10,6 +10,10 @@
 import * as http from "node:http";
 import { ZodError } from "zod";
 import { HttpError, toErrorResponse } from "../errors";
+import {
+  SessionNotFoundError,
+  InvalidTransitionError,
+} from "../session-manager";
 
 /** Largest request body we accept (256 KiB) — bounds untrusted input. */
 const MAX_BODY_BYTES = 256 * 1024;
@@ -69,6 +73,17 @@ export function readJsonBody(req: http.IncomingMessage): Promise<unknown> {
 export function sendError(res: http.ServerResponse, err: unknown): void {
   if (res.headersSent) {
     res.end();
+    return;
+  }
+  // Map the orchestrator/session-manager domain errors to HTTP statuses.
+  if (err instanceof SessionNotFoundError) {
+    sendJson(res, 404, { error: { code: "not_found", message: err.message } });
+    return;
+  }
+  if (err instanceof InvalidTransitionError) {
+    sendJson(res, 409, {
+      error: { code: "invalid_transition", message: err.message },
+    });
     return;
   }
   // Body/param validation failures become a 400 with the offending fields.
