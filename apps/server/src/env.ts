@@ -21,6 +21,13 @@ const EnvSchema = z.object({
   /** Redis connection for the durable event store. When unset, events are kept
    *  in memory (fine for dev/tests; lost on restart). Set it to enable Redis. */
   REDIS_URL: z.url().optional(),
+  /** When set, run deterministic in-memory fake agents instead of spawning the
+   *  real Claude/Codex CLIs. Lets the full handoff loop demo without provider
+   *  auth. Real adapters are the default. */
+  RELAY_FAKE_AGENTS: z
+    .enum(["0", "1", "true", "false"])
+    .optional()
+    .transform((v) => v === "1" || v === "true"),
   NODE_ENV: z
     .enum(["development", "test", "production"])
     .default("development"),
