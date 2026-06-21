@@ -77,6 +77,9 @@ export interface EventStore {
   loadHandoff(
     sessionId: string
   ): HandoffPacket | null | Promise<HandoffPacket | null>;
+  /** Optional lifecycle hooks implemented by durable stores. */
+  flush?(): void | Promise<void>;
+  close?(): void | Promise<void>;
 }
 
 export interface OrchestratorDeps {
@@ -188,6 +191,7 @@ export class Orchestrator {
         goal: packet.task.goal,
         targetAgent: packet.targetAgent,
         metrics: packet.metrics,
+        packet,
       });
       this.deps.sessions.transition(sessionId, "handoff_ready");
       return packet;
@@ -279,6 +283,14 @@ export class Orchestrator {
     return this.deps.store.readEvents(sessionId, after);
   }
 
+  /** Stop every live adapter during server shutdown. Safe to call repeatedly. */
+  async stopAll(): Promise<void> {
+    const adapters = [...this.runtime.values()]
+      .map((rt) => rt.adapter)
+      .filter((adapter): adapter is AgentAdapter => adapter !== null);
+    await Promise.allSettled(adapters.map((adapter) => adapter.stop()));
+  }
+
   // --- internals ----------------------------------------------------------
 
   private async startAgent(
@@ -302,16 +314,23 @@ export class Orchestrator {
     this.runtime.set(sessionId, rt);
 
     this.deps.sessions.transition(sessionId, targetState);
-    await adapter.start(
-      {
-        sessionId,
-        cwd: session.workspaceDir,
-        model: opts.model,
-        prompt: opts.prompt ?? session.goal,
-        manifestPath: opts.manifestPath,
-      },
-      this.sink(sessionId)
-    );
+    try {
+      await adapter.start(
+        {
+          sessionId,
+          cwd: session.workspaceDir,
+          model: opts.model,
+          prompt: opts.prompt ?? session.goal,
+          manifestPath: opts.manifestPath,
+        },
+        this.sink(sessionId)
+      );
+    } catch (err) {
+      this.deps.sessions.transition(sessionId, "failed", {
+        error: err instanceof Error ? err.message : String(err),
+      });
+      throw err;
+    }
   }
 
   private ensureRuntime(sessionId: string): SessionRuntime {

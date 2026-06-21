@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import type { AddressInfo } from "node:net";
 import WebSocket from "ws";
-import { createApp } from "./app";
+import { createApp, createAppRuntime } from "./app";
 import { SessionBroadcaster } from "./broadcaster";
 import { loadEnv } from "./env";
 import { SessionManager } from "./session-manager";
@@ -53,4 +53,32 @@ test("the production app mounts sessions and the session WebSocket", async () =>
   } finally {
     await new Promise<void>((resolve) => server.close(() => resolve()));
   }
+});
+
+test("createAppRuntime exposes dependencies and closes them once", async () => {
+  const broadcaster = new SessionBroadcaster();
+  const sessions = new SessionManager();
+  let storeClosed = 0;
+  const store = {
+    appendEvent() {},
+    readEvents: () => [],
+    saveHandoff() {},
+    loadHandoff: () => null,
+    close: async () => {
+      storeClosed++;
+    },
+  };
+  const runtime = createAppRuntime(loadEnv({ PORT: "0" }), {
+    broadcaster,
+    sessions,
+    store,
+  });
+
+  assert.equal(runtime.sessions, sessions);
+  assert.equal(runtime.broadcaster, broadcaster);
+  assert.equal(runtime.store, store);
+  assert.ok(runtime.orchestrator);
+  await runtime.close();
+  await runtime.close();
+  assert.equal(storeClosed, 1);
 });

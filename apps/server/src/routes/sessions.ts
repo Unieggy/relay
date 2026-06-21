@@ -12,8 +12,7 @@
 import * as http from "node:http";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { z } from "zod";
-import { AgentId } from "../../../../packages/shared/common";
+import { CreateSessionRequest } from "../../../../packages/shared";
 import { HttpError, methodNotAllowed, notFound } from "../errors";
 import {
   SessionManager,
@@ -25,19 +24,6 @@ import { readJsonBody, sendJson } from "./respond";
 export interface SessionRoutesDeps {
   sessions: SessionManager;
 }
-
-/** Request body for POST /api/sessions. */
-const CreateSessionBody = z.object({
-  goal: z.string().trim().min(1, "goal is required"),
-  verificationCommand: z
-    .string()
-    .trim()
-    .min(1, "verificationCommand is required"),
-  workspaceDir: z.string().trim().min(1, "workspaceDir is required"),
-  acceptanceCriteria: z.array(z.string()).optional(),
-  sourceAgent: AgentId.optional(),
-  targetAgent: AgentId.nullable().optional(),
-});
 
 /** Resolve + verify the repository path is an existing directory. */
 function resolveWorkspaceDir(input: string): string {
@@ -67,7 +53,7 @@ async function createSession(
   res: http.ServerResponse,
   deps: SessionRoutesDeps
 ): Promise<void> {
-  const body = CreateSessionBody.parse(await readJsonBody(req));
+  const body = CreateSessionRequest.parse(await readJsonBody(req));
   const input: CreateSessionInput = {
     goal: body.goal,
     verificationCommand: body.verificationCommand,

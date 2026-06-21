@@ -196,4 +196,22 @@ export class SessionBroadcaster {
     for (const set of this.clients.values()) total += set.size;
     return total;
   }
+
+  /** Close every live client during server shutdown. Idempotent. */
+  close(): void {
+    for (const set of this.clients.values()) {
+      for (const socket of set) {
+        try {
+          socket.end(CLOSE_EMPTY);
+        } catch {
+          try {
+            socket.destroy();
+          } catch {
+            /* already closed */
+          }
+        }
+      }
+    }
+    this.clients.clear();
+  }
 }

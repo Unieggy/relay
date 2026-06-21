@@ -11,36 +11,24 @@
  * against the same shape so it can later be backed by (or mirrored into) Redis
  * without changing callers.
  *
- * CONTRACT NOTE — `RelaySession` and `SessionState` are listed in the spec as
- * shared contracts but do not exist in `packages/shared` yet. They are defined
- * here (as Zod schemas, matching the shared style, and reusing the real shared
- * `AgentId`) so this ticket isn't blocked. They should be PROMOTED to
- * `packages/shared` once Syed confirms the shape — at which point this file
- * imports them instead of declaring them. No behavior changes on promotion.
+ * The wire-level `RelaySession` and `SessionState` schemas live in
+ * `packages/shared`; this module owns only lifecycle behavior and storage.
  */
 
 import { randomUUID } from "node:crypto";
-import { z } from "zod";
-import { AgentId } from "../../../packages/shared/common";
+import {
+  RelaySession,
+  SESSION_STATES,
+  SessionState,
+  type AgentId,
+} from "../../../packages/shared";
+
+// Preserve the existing server import surface while making shared the source of truth.
+export { RelaySession, SESSION_STATES, SessionState } from "../../../packages/shared";
 
 // ---------------------------------------------------------------------------
 // State machine
 // ---------------------------------------------------------------------------
-
-/** The eight session states from the spec, in lifecycle order. */
-export const SESSION_STATES = [
-  "created",
-  "claude_running",
-  "handoff_building",
-  "handoff_ready",
-  "codex_running",
-  "verifying",
-  "completed",
-  "failed",
-] as const;
-
-export const SessionState = z.enum(SESSION_STATES);
-export type SessionState = z.infer<typeof SessionState>;
 
 /** End states — no outgoing transitions. */
 export const TERMINAL_STATES: readonly SessionState[] = ["completed", "failed"];
@@ -95,26 +83,6 @@ export const TRANSITIONS: Record<SessionState, ReadonlySet<SessionState>> =
 export function canTransition(from: SessionState, to: SessionState): boolean {
   return TRANSITIONS[from].has(to);
 }
-
-// ---------------------------------------------------------------------------
-// Session shape (PROPOSED shared contract — see header note)
-// ---------------------------------------------------------------------------
-
-export const RelaySession = z.object({
-  id: z.string(),
-  state: SessionState,
-  goal: z.string(),
-  acceptanceCriteria: z.array(z.string()).default([]),
-  verificationCommand: z.string(),
-  workspaceDir: z.string(),
-  sourceAgent: AgentId,
-  targetAgent: AgentId.nullable().default(null),
-  /** Populated when the session enters `failed`. */
-  error: z.string().nullable().default(null),
-  createdAt: z.string(), // ISO 8601
-  updatedAt: z.string(), // ISO 8601
-});
-export type RelaySession = z.infer<typeof RelaySession>;
 
 export interface CreateSessionInput {
   goal: string;

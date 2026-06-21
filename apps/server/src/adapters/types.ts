@@ -13,10 +13,9 @@
  * process runner).
  */
 
-import type { RelayEvent } from "../../../../packages/shared/events";
+import type { RelayEventSink } from "../../../../packages/shared";
 
-/** Where emitted events go (broadcaster, event-store, …). Injected by the caller. */
-export type RelayEventSink = (event: RelayEvent) => void;
+export type { RelayEventSink } from "../../../../packages/shared";
 
 /** Lifecycle of a single agent run. */
 export type AgentStatus = "idle" | "starting" | "running" | "exited" | "failed";

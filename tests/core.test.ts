@@ -6,6 +6,7 @@ import {
   EvidenceBundle,
   HandoffPacket,
   RelayEvent,
+  RelaySession,
 } from "../packages/shared";
 
 test("extractSkeleton keeps structural TypeScript lines and drops bodies", () => {
@@ -101,6 +102,19 @@ test("shared schemas validate evidence, events, and packet defaults", () => {
 
   assert.deepEqual(packet.pitfalls, []);
   assert.deepEqual(packet.focusFiles, []);
+
+  const session = RelaySession.parse({
+    id: "session-1",
+    state: "created",
+    goal: "Resume safely",
+    verificationCommand: "npm test",
+    workspaceDir: "/tmp/relay",
+    sourceAgent: "claude",
+    createdAt: "2026-06-21T00:00:00.000Z",
+    updatedAt: "2026-06-21T00:00:00.000Z",
+  });
+  assert.deepEqual(session.acceptanceCriteria, []);
+  assert.equal(session.targetAgent, null);
 });
 
 test("handoff schema rejects unsupported providers", () => {

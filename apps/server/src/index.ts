@@ -6,42 +6,44 @@
  * tested in isolation (`env.ts`, `app.ts`), so this file stays thin.
  */
 
-import type { Server } from "node:http";
 import { loadEnv } from "./env";
-import { createApp } from "./app";
+import { createAppRuntime, type AppRuntime } from "./app";
 
 /** Drain in-flight requests, then exit. Idempotent + force-quits if stuck. */
-function installGracefulShutdown(server: Server): void {
+function installGracefulShutdown(runtime: AppRuntime): void {
   let shuttingDown = false;
 
-  const shutdown = (signal: string): void => {
+  const shutdown = async (signal: string): Promise<void> => {
     if (shuttingDown) return;
     shuttingDown = true;
     console.log(`[relay:server] ${signal} received — shutting down…`);
 
-    server.close((err) => {
-      if (err) {
-        console.error("[relay:server] error during shutdown:", err);
-        process.exit(1);
-      }
-      console.log("[relay:server] closed cleanly.");
-      process.exit(0);
-    });
-
-    // Don't hang forever if a connection refuses to drain.
-    setTimeout(() => {
+    const forceTimer = setTimeout(() => {
       console.error("[relay:server] shutdown timed out — forcing exit.");
       process.exit(1);
-    }, 10_000).unref();
+    }, 10_000);
+    forceTimer.unref();
+
+    try {
+      await runtime.close();
+      clearTimeout(forceTimer);
+      console.log("[relay:server] closed cleanly.");
+      process.exit(0);
+    } catch (err) {
+      clearTimeout(forceTimer);
+      console.error("[relay:server] error during shutdown:", err);
+      process.exit(1);
+    }
   };
 
-  process.on("SIGINT", () => shutdown("SIGINT"));
-  process.on("SIGTERM", () => shutdown("SIGTERM"));
+  process.on("SIGINT", () => void shutdown("SIGINT"));
+  process.on("SIGTERM", () => void shutdown("SIGTERM"));
 }
 
 function main(): void {
   const env = loadEnv();
-  const server = createApp(env);
+  const runtime = createAppRuntime(env);
+  const { server } = runtime;
 
   server.listen(env.PORT, () => {
     console.log(
@@ -49,7 +51,7 @@ function main(): void {
     );
   });
 
-  installGracefulShutdown(server);
+  installGracefulShutdown(runtime);
 }
 
 main();

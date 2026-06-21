@@ -6,8 +6,9 @@
  * it never calls `.listen()` — `index.ts` (bootstrap) does that. This keeps the
  * app importable in tests, which bind it to an ephemeral port themselves.
  *
- * Only GET /health exists in this ticket. Sessions, WebSockets, and the process
- * runner attach to this server in later tickets.
+ * The app mounts health/session HTTP routes and the session-scoped WebSocket
+ * broadcaster. Runtime dependencies are exposed by `createAppRuntime()` so the
+ * coordinator and event store can be added without hidden singletons.
  */
 
 import * as http from "node:http";
@@ -30,6 +31,17 @@ export interface AppOptions {
   broadcaster?: SessionBroadcaster;
   store?: EventStore;
   orchestrator?: Orchestrator;
+}
+
+export interface AppRuntime {
+  server: http.Server;
+  sessions: SessionManager;
+  broadcaster: SessionBroadcaster;
+  orchestrator: Orchestrator;
+  /** Null only when a fully custom orchestrator was injected without its store. */
+  store: EventStore | null;
+  /** Stop agents, close sockets/server, and flush durable storage. */
+  close(): Promise<void>;
 }
 
 function sendJson(
@@ -92,16 +104,21 @@ async function route(
   throw notFound(`No route for ${req.method} ${pathname}`);
 }
 
-export function createApp(env: Env, opts: AppOptions = {}): http.Server {
+export function createAppRuntime(
+  env: Env,
+  opts: AppOptions = {}
+): AppRuntime {
   const sessions = opts.sessions ?? new SessionManager();
   const broadcaster = opts.broadcaster ?? new SessionBroadcaster();
-  // Durable Redis store when REDIS_URL is set; in-memory otherwise (dev/tests).
-  const store =
-    opts.store ??
-    (env.REDIS_URL ? new RedisEventStore(env.REDIS_URL) : new InMemoryEventStore());
-  const orchestrator =
-    opts.orchestrator ??
-    new Orchestrator({
+  let store = opts.store ?? null;
+  let orchestrator = opts.orchestrator;
+
+  if (!orchestrator) {
+    // Durable Redis store when REDIS_URL is set; in-memory otherwise (dev/tests).
+    store ??= env.REDIS_URL
+      ? new RedisEventStore(env.REDIS_URL)
+      : new InMemoryEventStore();
+    orchestrator = new Orchestrator({
       sessions,
       store,
       adapters: {
@@ -118,6 +135,7 @@ export function createApp(env: Env, opts: AppOptions = {}): http.Server {
         }
       },
     });
+  }
   const api = createApiRouter({ sessions, orchestrator });
 
   const server = http.createServer((req, res) => {
@@ -139,5 +157,30 @@ export function createApp(env: Env, opts: AppOptions = {}): http.Server {
   });
 
   broadcaster.attach(server);
-  return server;
+  let closed = false;
+  return {
+    server,
+    sessions,
+    broadcaster,
+    orchestrator,
+    store,
+    async close(): Promise<void> {
+      if (closed) return;
+      closed = true;
+      await orchestrator.stopAll();
+      broadcaster.close();
+      if (server.listening) {
+        await new Promise<void>((resolve, reject) =>
+          server.close((err) => (err ? reject(err) : resolve()))
+        );
+      }
+      await store?.flush?.();
+      await store?.close?.();
+    },
+  };
+}
+
+/** Compatibility helper for callers that only need the HTTP server. */
+export function createApp(env: Env, opts: AppOptions = {}): http.Server {
+  return createAppRuntime(env, opts).server;
 }

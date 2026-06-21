@@ -8,3 +8,4 @@ export * from "./common";
 export * from "./evidence";
 export * from "./handoff";
 export * from "./events";
+export * from "./session";

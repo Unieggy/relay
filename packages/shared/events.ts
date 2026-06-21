@@ -46,3 +46,6 @@ export const RelayEvent = z.object({
   payload: z.record(z.string(), z.unknown()),
 });
 export type RelayEvent = z.infer<typeof RelayEvent>;
+
+/** Neutral event destination used by adapters, runners, broadcasters, and stores. */
+export type RelayEventSink = (event: RelayEvent) => void;

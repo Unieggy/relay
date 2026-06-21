@@ -83,7 +83,9 @@ test("Claude → handoff → Codex → verify drives the full state machine", as
   // The packet was persisted and the timeline captured the key milestones.
   assert.ok(await store.loadHandoff(s.id));
   const events = await orch.getEvents(s.id);
-  assert.ok(events.some((e) => e.type === "handoff.created"));
+  const handoffEvent = events.find((e) => e.type === "handoff.created");
+  assert.ok(handoffEvent);
+  assert.doesNotThrow(() => HandoffPacket.parse(handoffEvent.payload.packet));
   assert.ok(events.some((e) => e.type === "test.passed"));
   assert.ok(broadcast.length > 0, "events were broadcast");
 });
@@ -169,4 +171,44 @@ test("sendInput throws when no agent is live", () => {
   const { orch, sessions } = makeOrchestrator();
   const s = newSession(sessions);
   assert.throws(() => orch.sendInput(s.id, "x"), /No live agent/);
+});
+
+test("adapter launch failure moves the session to failed", async () => {
+  const { sessions } = makeOrchestrator();
+  const s = newSession(sessions);
+  const adapter = new FakeAgentAdapter({ id: "claude" });
+  adapter.start = async () => {
+    throw new Error("launch failed");
+  };
+  const failing = new Orchestrator({
+    sessions,
+    store: new InMemoryEventStore(),
+    adapters: {
+      claude: () => adapter,
+      codex: () => new FakeAgentAdapter({ id: "codex" }),
+    },
+    createHandoff: fallbackCreateHandoff,
+  });
+
+  await assert.rejects(() => failing.startClaude(s.id), /launch failed/);
+  assert.equal(sessions.get(s.id).state, "failed");
+});
+
+test("stopAll stops every live adapter", async () => {
+  const sessions = new SessionManager();
+  const adapter = new FakeAgentAdapter({ id: "claude" });
+  const orch = new Orchestrator({
+    sessions,
+    store: new InMemoryEventStore(),
+    adapters: {
+      claude: () => adapter,
+      codex: () => new FakeAgentAdapter({ id: "codex" }),
+    },
+    createHandoff: fallbackCreateHandoff,
+  });
+  const s = newSession(sessions);
+  await orch.startClaude(s.id);
+
+  await orch.stopAll();
+  assert.equal(adapter.status(), "exited");
 });

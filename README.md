@@ -5,6 +5,22 @@ hits a rate limit, crashes, or runs out of context. The engine freezes workspace
 evidence, distills a validated handoff packet, and resumes the task on another
 provider.
 
+## Repository map
+
+```text
+packages/shared/       Runtime-validated contracts used by every layer
+apps/server/src/       HTTP, sessions, WebSockets, process execution, adapters
+adapters/               Existing one-shot engine provider integrations
+ui/src/                 Terminal companion interface and live event projection
+tests/                  Root engine and cross-layer contract tests
+demo-repo/              Small deterministic repository for the handoff demo
+```
+
+Shared schemas are the dependency boundary: server, engine, persistence, and UI
+may import `packages/shared`, but shared contracts never import an application.
+Provider adapters emit `RelayEvent`s through `RelayEventSink`; they do not know
+whether events are broadcast, persisted, or both.
+
 ## Terminal Companion
 
 The React prototype in `ui/` keeps the terminal live on the left with a slim
