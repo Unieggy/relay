@@ -336,12 +336,19 @@ function Rail({
 }
 
 // ?live=<sessionId>&ws=<wsBase> switches the UI to the real broadcaster.
-function liveConfig(): { sessionId: string | null; base: string; api: string } {
+// ?rail=1 renders only the Relay rail — the docked terminal-companion sidebar.
+function liveConfig(): {
+  sessionId: string | null;
+  base: string;
+  api: string;
+  railOnly: boolean;
+} {
   if (typeof window === "undefined") {
     return {
       sessionId: null,
       base: "ws://127.0.0.1:4000",
       api: "http://127.0.0.1:4000",
+      railOnly: false,
     };
   }
   const params = new URLSearchParams(window.location.search);
@@ -350,6 +357,7 @@ function liveConfig(): { sessionId: string | null; base: string; api: string } {
     sessionId: params.get("live"),
     base,
     api: params.get("api") ?? base.replace(/^ws/i, "http"),
+    railOnly: params.get("rail") === "1",
   };
 }
 
@@ -656,16 +664,18 @@ export function App() {
   );
 
   return (
-    <main className="shell">
+    <main className={`shell ${config.railOnly ? "rail-only" : ""}`}>
       <div className="workspace">
-        <Terminal
-          lines={lines}
-          phase={phase}
-          interactive={isLive}
-          onInput={(text) =>
-            sessionAction("input", "/input", { data: `${text}\n` })
-          }
-        />
+        {!config.railOnly && (
+          <Terminal
+            lines={lines}
+            phase={phase}
+            interactive={isLive}
+            onInput={(text) =>
+              sessionAction("input", "/input", { data: `${text}\n` })
+            }
+          />
+        )}
         <Rail
           phase={phase}
           handoffDone={handoffDone}
@@ -680,12 +690,14 @@ export function App() {
           bench={bench}
         />
       </div>
-      <footer className="note">
-        <span>Quiet while healthy. Useful when an agent fails.</span>
-        <span>
-          {demoEvents.length} validated events · packet v{demoPacket.version}
-        </span>
-      </footer>
+      {!config.railOnly && (
+        <footer className="note">
+          <span>Quiet while healthy. Useful when an agent fails.</span>
+          <span>
+            {demoEvents.length} validated events · packet v{demoPacket.version}
+          </span>
+        </footer>
+      )}
     </main>
   );
 }

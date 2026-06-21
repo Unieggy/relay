@@ -474,6 +474,23 @@ svg { flex: 0 0 auto; }
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+/* ---- rail-only (docked terminal-companion sidebar, ?rail=1) ---------- */
+.shell.rail-only {
+  max-width: none;
+  padding: 0;
+  gap: 0;
+  height: 100vh;
+}
+.shell.rail-only .workspace {
+  grid-template-columns: 1fr;
+  min-height: 0;
+  height: 100vh;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+.shell.rail-only .rail { border-left: 0; }
+
 /* ---- responsive ----------------------------------------------------- */
 @media (max-width: 760px) {
   .shell { padding: 16px; }

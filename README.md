@@ -31,6 +31,19 @@ Run against the real CLIs (must be installed + authenticated):
 RELAY_FAKE_AGENTS=0 npm run demo
 ```
 
+### Docked sidebar (terminal companion)
+
+Pin the rail beside your real terminal as a frameless desktop window:
+
+```bash
+npm run demo       # in one shell (server + UI)
+npm run sidebar    # in another — opens the rail-only companion
+```
+
+Or open the rail-only view in any browser:
+`http://127.0.0.1:4173/?rail=1`. (A standalone Electron/VS-code wrapper is the
+next step — both reuse this same view, no rewrite.)
+
 ## The demo flow
 
 1. An agent (Claude) starts fixing a real bug in `demo-repo/` — the `users.age`

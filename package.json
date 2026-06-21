@@ -12,6 +12,7 @@
     "ui:dev": "vite --config ui/vite.config.ts",
     "ui:build": "tsc -p ui/tsconfig.json && vite build --config ui/vite.config.ts",
     "demo": "node scripts/demo.mjs",
+    "sidebar": "node scripts/sidebar.mjs",
     "demo:redis": "tsx redis-demo.ts",
     "ws:client": "tsx ws-test-client.ts",
     "ws:test": "node --import tsx --test ws-test-client.test.ts"
