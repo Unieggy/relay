@@ -193,6 +193,8 @@ svg { flex: 0 0 auto; }
 .status.working { color: var(--red); }
 .status.switching { color: #c4b5fd; }
 .status.resumed { color: var(--green); }
+.status.failed { color: var(--red); }
+.status.completed { color: var(--green); }
 
 .block { padding: 0 2px; }
 .block small {
@@ -521,16 +523,19 @@ svg { flex: 0 0 auto; }
   padding: 0;
   gap: 0;
   height: 100vh;
+  overflow: hidden;
 }
 .shell.rail-only .workspace {
   grid-template-columns: 1fr;
+  grid-template-rows: 100vh;
   min-height: 0;
   height: 100vh;
   border: 0;
   border-radius: 0;
   box-shadow: none;
 }
-.shell.rail-only .rail { border-left: 0; }
+/* Fixed-height rail so rail-body (1fr) scrolls instead of overflowing. */
+.shell.rail-only .rail { border-left: 0; height: 100vh; min-height: 0; }
 
 /* ---- responsive ----------------------------------------------------- */
 @media (max-width: 760px) {

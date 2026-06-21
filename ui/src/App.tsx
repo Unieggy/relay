@@ -62,6 +62,27 @@ function Icon({ name, size = 14 }: { name: IconName; size?: number }) {
   );
 }
 
+/** Claude's sunburst mark in its brand clay/orange. */
+function ClaudeMark({ size = 22 }: { size?: number }) {
+  const rays = Array.from({ length: 12 }, (_, i) => (i * 360) / 12);
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
+      <g stroke="#d97757" strokeWidth="2.1" strokeLinecap="round">
+        {rays.map((deg) => (
+          <line
+            key={deg}
+            x1="12"
+            y1="12"
+            x2="12"
+            y2="3.5"
+            transform={`rotate(${deg} 12 12)`}
+          />
+        ))}
+      </g>
+    </svg>
+  );
+}
+
 // Claude works the bug, then hits a usage limit with the test still failing.
 const claudeLines: Line[] = [
   { kind: "muted", value: "Last login: Sun Jun 21 00:14 on ttys002" },
@@ -174,6 +195,8 @@ function Rail({
   verifyLabel,
   verifyEditable = false,
   onVerifyChange,
+  failed = false,
+  completed = false,
 }: {
   phase: Phase;
   handoffDone: boolean;
@@ -189,6 +212,8 @@ function Rail({
   verifyLabel: string;
   verifyEditable?: boolean;
   onVerifyChange?: (value: string) => void;
+  failed?: boolean;
+  completed?: boolean;
 }) {
   const isCodex = agentName ? agentName === "codex" : phase === "resumed";
   const agent = isCodex
@@ -196,7 +221,11 @@ function Rail({
     : { name: "Claude", letter: "C", tone: "claude" };
 
   const status =
-    phase === "switching"
+    failed
+      ? "failed"
+      : completed
+        ? "completed"
+      : phase === "switching"
       ? "relaying context…"
       : phase === "resumed"
         ? "resumed · working"
@@ -217,16 +246,22 @@ function Rail({
 
       <div className="rail-body">
         <div className="agent">
-          <span className={`glyph ${agent.tone} ${phase}`}>{agent.letter}</span>
+          <span className={`glyph ${agent.tone} ${phase}`}>
+            {isCodex ? agent.letter : <ClaudeMark size={22} />}
+          </span>
           <div>
             <small>ACTIVE AGENT</small>
             <strong>{agent.name}</strong>
-            <span className={`status ${phase}`}>{status}</span>
+            <span
+              className={`status ${failed ? "failed" : completed ? "completed" : phase}`}
+            >
+              {status}
+            </span>
           </div>
         </div>
 
         <div className="block">
-          <small>TASK</small>
+          <small>WORKING ON</small>
           <p>{taskGoal}</p>
         </div>
 
@@ -521,6 +556,7 @@ export function App() {
             prompt: task,
             apiKey: keyFor(initialAgent),
             apiKeys,
+            models: { claude: claudeModel, codex: codexModel },
           }),
         }
       );
@@ -566,11 +602,27 @@ export function App() {
   const selectedActiveAgent = isLive && events.length ? activeAgent(events) : initialAgent;
   const switchTarget = otherAgent(selectedActiveAgent);
   const sessionComplete = isLive && events.some((event) => event.type === "session.completed");
+  const sessionFailed =
+    isLive &&
+    events.some(
+      (event) =>
+        event.type === "session.failed" || event.type === "handoff.failed"
+    );
+  const sessionTerminal = sessionComplete || sessionFailed;
   const hasNativePicker =
     typeof window !== "undefined" && Boolean(window.relay?.pickWorkspace);
   async function browseWorkspace(): Promise<void> {
     const picked = await window.relay?.pickWorkspace?.();
     if (typeof picked === "string") setWorkspaceDir(picked);
+  }
+  // Open the full dashboard (the live terminal = the run logs) in a new window.
+  function openLogs(): void {
+    const params = new URLSearchParams();
+    if (currentSessionId) params.set("live", currentSessionId);
+    params.set("api", apiBase);
+    params.set("ws", wsBase);
+    const url = `${window.location.origin}/?${params.toString()}`;
+    window.open(url, "relay-logs", "width=900,height=640");
   }
   const controls = (
     <div className="controls" aria-label="Session controls">
@@ -695,6 +747,9 @@ export function App() {
                   onChange={(event) => setApiBase(event.target.value)}
                 />
               </label>
+              <button type="button" className="action" onClick={openLogs}>
+                Check logs
+              </button>
             </div>
           </details>
         </>
@@ -705,16 +760,20 @@ export function App() {
               className="action primary"
               onClick={() => switchAgent(switchTarget)}
               disabled={
-                pendingAction !== null || phase === "switching" || sessionComplete
+                pendingAction !== null || phase === "switching" || sessionTerminal
               }
             >
-              {sessionComplete ? "Session complete" : `Switch to ${agentLabel(switchTarget)}`}
+              {sessionComplete
+                ? "Session complete"
+                : sessionFailed
+                  ? "Session failed"
+                  : `Switch to ${agentLabel(switchTarget)}`}
             </button>
             <button
               className="action"
               onClick={() => sessionAction("verify", "/verify")}
               disabled={
-                pendingAction !== null || phase === "switching" || sessionComplete
+                pendingAction !== null || phase === "switching" || sessionTerminal
               }
             >
               Verify
@@ -733,7 +792,7 @@ export function App() {
           <Terminal
             lines={lines}
             phase={phase}
-            interactive={isLive && !sessionComplete}
+            interactive={isLive && !sessionTerminal}
             onInput={(text) =>
               sessionAction("input", "/input", { data: `${text}\n` })
             }
@@ -754,6 +813,8 @@ export function App() {
           verifyLabel={verificationCommand}
           verifyEditable={!isLive}
           onVerifyChange={setVerificationCommand}
+          failed={sessionFailed}
+          completed={sessionComplete}
         />
       </div>
       {!config.railOnly && (
