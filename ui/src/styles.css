@@ -264,6 +264,50 @@ svg { flex: 0 0 auto; }
   color: var(--faint);
   background: var(--line-2);
 }
+/* RelayBench */
+.bench {
+  background: var(--card-2);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: 12px 14px;
+}
+.bench summary {
+  color: var(--faint);
+  cursor: pointer;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+.bench summary:hover { color: var(--muted); }
+.bench-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 11px;
+  font-size: 10px;
+}
+.bench-table th {
+  text-align: right;
+  color: var(--faint);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  padding: 0 0 6px;
+}
+.bench-table th:first-child { text-align: left; }
+.bench-table td {
+  padding: 5px 0;
+  border-top: 1px solid var(--line);
+  text-align: right;
+  color: var(--soft);
+  font-family: var(--mono);
+}
+.bench-table td:first-child {
+  text-align: left;
+  color: var(--muted);
+  font-family: inherit;
+}
+.bench-table td.val { color: var(--green); }
+.bench-table td.nm { color: var(--faint); font-style: italic; font-family: inherit; }
 .chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: -3px; }
 .chip {
   border: 1px solid var(--line);

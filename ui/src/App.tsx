@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { demoEvents, demoPacket } from "./demo";
 import { useRelayStream } from "./useRelayStream";
+import { deriveBench, type BenchRow } from "./bench";
 import {
   activeAgent,
   derivePhase,
@@ -169,6 +170,7 @@ function Rail({
   controls,
   taskGoal,
   packet,
+  bench,
 }: {
   phase: Phase;
   handoffDone: boolean;
@@ -180,6 +182,7 @@ function Rail({
   controls?: ReactNode;
   taskGoal: string;
   packet: HandoffPacket | null;
+  bench: BenchRow[];
 }) {
   const isCodex = agentName ? agentName === "codex" : phase === "resumed";
   const agent = isCodex
@@ -273,6 +276,32 @@ function Rail({
             Migration test
           </div>
         </div>
+
+        <details className="bench">
+          <summary>RelayBench</summary>
+          <table className="bench-table">
+            <thead>
+              <tr>
+                <th></th>
+                <th>No Relay</th>
+                <th>Relay</th>
+              </tr>
+            </thead>
+            <tbody>
+              {bench.map((row) => (
+                <tr key={row.label}>
+                  <td>{row.label}</td>
+                  <td className={row.without == null ? "nm" : ""}>
+                    {row.without ?? "not measured"}
+                  </td>
+                  <td className={row.withRelay == null ? "nm" : "val"}>
+                    {row.withRelay ?? "not measured"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </details>
 
         {controls}
       </div>
@@ -493,6 +522,7 @@ export function App() {
   const lines = isLive ? liveLines : demoLines;
   const handoffDone = isLive ? packetReady(events) : demoPhase !== "working";
   const packet = isLive ? latestHandoffPacket(events) : demoPacket;
+  const bench = deriveBench(isLive ? events : demoEvents, packet);
   const selectedActiveAgent = isLive && events.length ? activeAgent(events) : initialAgent;
   const switchTarget = otherAgent(selectedActiveAgent);
   const controls = (
@@ -647,6 +677,7 @@ export function App() {
           controls={controls}
           taskGoal={goal}
           packet={packet}
+          bench={bench}
         />
       </div>
       <footer className="note">
