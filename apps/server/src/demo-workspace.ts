@@ -29,7 +29,7 @@ export function completeBundledDemo(
   } catch {
     return [];
   }
-  if (packageName !== "relay-demo-repo") return [];
+  if (packageName !== "baton-demo-repo") return [];
 
   const source = fs.readFileSync(migrationPath, "utf8");
   if (source.includes(FIXED_LINES)) return [];

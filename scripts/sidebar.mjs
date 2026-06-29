@@ -1,5 +1,5 @@
 /**
- * Relay — docked sidebar launcher.
+ * Baton - docked sidebar launcher.
  *
  * Opens the rail-only companion (?rail=1) as a frameless, app-style desktop
  * window you can pin beside your real terminal. Zero extra dependencies — it
@@ -26,10 +26,10 @@ const args = [
   "--window-position=1460,60",
 ];
 
-console.log(`[relay:sidebar] opening companion → ${url}`);
+console.log(`[baton:sidebar] opening companion -> ${url}`);
 const child = spawn("open", args, { stdio: "inherit" });
 child.on("error", (err) => {
-  console.error("[relay:sidebar] could not open Chrome:", err.message);
-  console.error(`[relay:sidebar] open this URL in any browser instead:\n  ${url}`);
+  console.error("[baton:sidebar] could not open Chrome:", err.message);
+  console.error(`[baton:sidebar] open this URL in any browser instead:\n  ${url}`);
   process.exit(1);
 });

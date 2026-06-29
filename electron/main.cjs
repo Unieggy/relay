@@ -19,7 +19,10 @@ const UI = process.env.RELAY_UI || "http://127.0.0.1:4173";
 const API = process.env.RELAY_API || "http://127.0.0.1:4000";
 const WS = process.env.RELAY_WS || "ws://127.0.0.1:4000";
 const DOCK = process.env.RELAY_DOCK || "right"; // right | left | float
-const WIDTH = Number(process.env.RELAY_WIDTH || 400);
+// Rail-only (compact companion) by default. RELAY_RAIL=0 loads the full
+// dashboard (terminal + chat box) inside Electron.
+const RAIL = process.env.RELAY_RAIL !== "0";
+const WIDTH = Number(process.env.RELAY_WIDTH || (RAIL ? 400 : 1200));
 
 function place(win) {
   const { workArea } = screen.getPrimaryDisplay();
@@ -50,7 +53,8 @@ function createWindow() {
   if (process.env.RELAY_ONTOP === "1") win.setAlwaysOnTop(true, "floating");
   place(win);
 
-  const url = `${UI}/?rail=1&api=${encodeURIComponent(API)}&ws=${encodeURIComponent(WS)}`;
+  const railParam = RAIL ? "rail=1&" : "";
+  const url = `${UI}/?${railParam}api=${encodeURIComponent(API)}&ws=${encodeURIComponent(WS)}`;
   void win.loadURL(url);
 
   // Re-snap to the edge if the screen layout changes.

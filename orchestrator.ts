@@ -603,11 +603,11 @@ if (require.main === module) {
   });
 
   orchestrator.on("event", (e) => {
-    console.log(`[relay] ${e.type.padEnd(18)} ${JSON.stringify(e.payload)}`);
+    console.log(`[baton] ${e.type.padEnd(18)} ${JSON.stringify(e.payload)}`);
   });
 
   (async () => {
-    console.log("[relay] adopting a live claude session…");
+    console.log("[baton] adopting a live claude session…");
     // The runtime spawned the first agent; the orchestrator adopts it. This one
     // rate-limits on its own, which trips the switch.
     orchestrator.start(
@@ -615,10 +615,10 @@ if (require.main === module) {
       makeFakeSession("claude", "claude-opus-4-8", /* rateLimit */ true)
     );
     await new Promise((r) => setTimeout(r, 1500));
-    console.log("[relay] final state:", orchestrator.getState().current);
+    console.log("[baton] final state:", orchestrator.getState().current);
     orchestrator.stop();
   })().catch((err) => {
-    console.error("[relay] demo failed:", err);
+    console.error("[baton] demo failed:", err);
     process.exit(1);
   });
 }

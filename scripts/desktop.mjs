@@ -1,5 +1,5 @@
 /**
- * Relay desktop launcher.
+ * Baton desktop launcher.
  *
  * Starts the local server + Vite UI, waits until both are ready, then opens the
  * Electron rail. One Ctrl-C (or closing Electron) shuts the whole stack down.
@@ -40,7 +40,7 @@ function requireSubscriptionLogins() {
   );
   if (claudeReady && codexReady) return;
 
-  console.error("\nRelay real mode needs both local subscription CLIs signed in:");
+  console.error("\nBaton real mode needs both local subscription CLIs signed in:");
   if (!claudeReady) console.error("  ✖ Claude: run `claude` and complete sign-in");
   if (!codexReady) console.error("  ✖ Codex: run `codex login`");
   console.error("\nThen retry: npm run desktop:real\n");
@@ -56,12 +56,12 @@ function launch(name, command, args, env = {}) {
   child.once("exit", (code, signal) => {
     children.delete(child);
     if (!shuttingDown) {
-      console.log(`[relay:${name}] exited (${code ?? signal ?? "unknown"})`);
+      console.log(`[baton:${name}] exited (${code ?? signal ?? "unknown"})`);
       shutdown(code ?? 0);
     }
   });
   child.once("error", (error) => {
-    console.error(`[relay:${name}] ${error.message}`);
+    console.error(`[baton:${name}] ${error.message}`);
     shutdown(1);
   });
   return child;
@@ -98,7 +98,7 @@ process.on("SIGINT", () => shutdown(0));
 process.on("SIGTERM", () => shutdown(0));
 
 console.log(
-  `[relay] starting desktop app (${fake === "0" ? "real subscription CLIs" : "safe demo mode"})`
+  `[baton] starting desktop app (${fake === "0" ? "real subscription CLIs" : "safe demo mode"})`
 );
 if (fake === "0") requireSubscriptionLogins();
 
@@ -116,6 +116,6 @@ try {
     RELAY_WS: WS,
   });
 } catch (error) {
-  console.error(`[relay] could not start desktop app: ${error.message}`);
+  console.error(`[baton] could not start desktop app: ${error.message}`);
   shutdown(1);
 }

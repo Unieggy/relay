@@ -124,7 +124,7 @@ export function startProcess(
       truncated = true;
       emit("terminal.output", {
         stream,
-        chunk: `\n[relay] output truncated at ${maxOutputBytes} bytes\n`,
+        chunk: `\n[baton] output truncated at ${maxOutputBytes} bytes\n`,
         truncated: true,
       });
       return;

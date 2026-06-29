@@ -40,8 +40,17 @@ test("loadEnv applies defaults when vars are absent", () => {
   assert.equal(env.PORT, 4000);
   assert.equal(env.WEB_URL, "http://localhost:3000");
   assert.equal(env.NODE_ENV, "development");
+  assert.equal(env.RELAY_AUTO_HANDOFF, true);
   // REDIS_URL is opt-in: unset → the in-memory store is used.
   assert.equal(env.REDIS_URL, undefined);
+});
+
+test("loadEnv can disable automatic handoffs", () => {
+  assert.equal(loadEnv({ RELAY_AUTO_HANDOFF: "0" }).RELAY_AUTO_HANDOFF, false);
+  assert.equal(
+    loadEnv({ RELAY_AUTO_HANDOFF: "false" }).RELAY_AUTO_HANDOFF,
+    false
+  );
 });
 
 test("loadEnv coerces a valid PORT string to a number", () => {

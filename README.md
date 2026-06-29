@@ -2,6 +2,13 @@
 
 ![Baton logo](docs/baton-logo.png)
 
+[![CI](https://github.com/Myst1C13/Baton/actions/workflows/ci.yml/badge.svg)](https://github.com/Myst1C13/Baton/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Node](https://img.shields.io/badge/node-%E2%89%A522-3c873a.svg)](package.json)
+[![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6.svg)](tsconfig.json)
+
+> Built at the UC Berkeley AI Hackathon, 2026.
+
 **Baton compiles noisy agent work into the smallest verified state another coding tool needs to continue.**
 
 When an AI coding agent hits a usage limit, crashes, or stalls mid-task, you
@@ -13,6 +20,10 @@ developer never re-explains the task.
 
 Baton is not an editor or a Cursor clone. It transfers work *between* independent
 tools (Claude Code ⇄ Codex CLI) through a visible, provider-neutral manifest.
+
+![Baton demo — Claude stalls, Baton hands off to Codex, Verify confirms](docs/demo.gif)
+
+*Claude Code hits a usage limit mid-fix → Baton compiles a verified handoff packet → Codex CLI resumes in the same repo → **Verify** runs the real tests and confirms the result.*
 
 ---
 
@@ -32,59 +43,41 @@ rather than from an agent's self-report, which may be wrong or optimistic. That
 verified packet is small enough to hand to *any* compatible tool, so work
 survives the death of the agent that started it.
 
-### For individual developers
+## What works today
 
-- **Never re-explain a task.** When your agent quits mid-change, Baton hands the
-  next tool a packet that already encodes intent, current diff, and the failing
-  check. You approve; you don't re-narrate.
-- **Provider-neutral.** Not locked to one vendor. When Claude Code stalls, Codex
-  CLI continues — and vice versa. Use whichever tool is available, healthy, or
-  cheaper right now.
-- **Evidence over vibes.** A handoff isn't "the agent said it's done." Baton runs
-  the real verification command and shows the exit code and verdict. Truth comes
-  from the repo, not the transcript.
-- **Local and private by default.** The control server binds to loopback only;
-  your code and secrets stay on your machine.
+- Start Claude Code or Codex CLI against a local repository.
+- Stream normalized process, terminal, file, and test events into the dashboard.
+- Trigger a handoff manually or after a detected rate limit/context threshold.
+- Rebuild state from Git, terminal evidence, and command exit codes.
+- Distill that evidence into a small, runtime-validated handoff packet.
+- Resume the other provider with the packet and repository already on disk.
+- Run a user-selected verification command and decide pass/fail from its exit code.
+- Persist event timelines and the latest packet in Redis when configured, with an
+  in-memory implementation for local demos and tests.
 
-### For teams and enterprises
+The bundled demo uses deterministic fake agents so the complete flow is
+repeatable without provider accounts. Real mode uses locally installed and
+authenticated `claude` and `codex` CLIs.
 
-- **Resilience to provider outages and rate limits.** A single vendor's
-  degradation no longer halts engineering work. Baton fails over to a second
-  agent automatically, so an upstream incident becomes a slowdown instead of a
-  stop. (See [Surviving a server outage](#surviving-a-server-outage).)
-- **Auditable handoffs.** Every transfer is a visible, provider-neutral manifest
-  plus a verification verdict — an artifact you can log, review, and attach to a
-  change. No black-box "the AI did something."
-- **Vendor independence / no lock-in.** Contracts live in `packages/shared` and
-  are provider-agnostic. Procurement and platform teams keep leverage; adding or
-  swapping a CLI is an adapter, not a rewrite.
-- **Cost control.** Route work to the cheapest healthy provider, and stop paying
-  the hidden labor cost of engineers manually rebuilding lost context.
-- **Compliance-friendly evidence trail.** Because state is reconstructed from git
-  and command exit codes, each handoff carries a factual, reproducible record of
-  what changed and whether it passed.
+## Trust boundary
 
-### Surviving a server outage
+Baton's server binds to `127.0.0.1`, keeps provider credentials in memory, and
+does not require a hosted Baton service. Real agent runs still send prompts and
+repository context to the provider selected by the user. The current Distiller
+can include Git diffs and failure output in that provider request, so Baton
+should not be described as keeping all code on-device.
 
-Provider outages and regional API degradation are now a routine operational risk.
-When the agent you're using goes down mid-task, the normal failure mode is total:
-the session is gone, the in-flight reasoning is gone, and a human has to restart
-the work elsewhere from memory.
+Secret redaction, repository policies, signed audit logs, and self-hosted team
+controls are roadmap work, not current guarantees.
 
-Baton turns that hard failure into a soft one:
+## Current limitations
 
-1. The active agent stalls or errors (limit hit, 5xx, timeout, provider outage).
-2. Baton freezes the workspace and compiles the verified handoff packet from the
-   repo state that already exists on disk — no dependency on the down provider.
-3. It launches a **different** agent, on a **different** provider, in the same
-   repo, seeded only by that packet.
-4. The new agent continues; **Verify** confirms the result against real tests.
-
-The packet is built from local, durable evidence, so it does not need the failed
-service to be reachable. With `REDIS_URL` set, in-flight timelines also survive a
-restart of Baton itself — so a crash of the orchestrator, not just the agent, is
-recoverable. The practical effect: **one provider's bad day stops being your
-team's blocked day.**
+- Only Claude Code and Codex CLI have first-party adapters.
+- Rate-limit and context-pressure detection exist; general provider-health and
+  arbitrary-stall detection do not.
+- Automatic handoffs are intentionally bounded to avoid provider ping-pong.
+- Verification is one command and one exit-code verdict.
+- Redis preserves events and packets, not the complete live process/session state.
 
 ---
 
@@ -155,6 +148,12 @@ stops the local stack. Inside the desktop app the Workspace field gains a
 
 The user never re-explains the task during the transfer.
 
+## Screens
+
+| Ready | Handoff | Verified |
+| --- | --- | --- |
+| ![Baton ready](docs/devpost-1-ready.png) | ![Baton handoff](docs/devpost-2-handoff.png) | ![Baton verified](docs/devpost-3-verified.png) |
+
 ## Architecture
 
 ```text
@@ -181,6 +180,42 @@ The user never re-explains the task during the transfer.
 The browser requests actions; the server controls processes and secrets.
 Evidence flows from the repo and command exit codes — **the repository and
 executable evidence outrank agent summaries.**
+
+### Distiller pipeline
+
+```text
+repository + runtime
+        │
+        ▼
+Evidence Collector ──► EvidenceBundle (Zod)
+        │                     │
+        │                     ├─ goal + acceptance criteria
+        │                     ├─ git branch/status/diff
+        │                     ├─ changed files + commands
+        │                     └─ latest failure + terminal excerpt
+        ▼
+Prompt Assembler ──► Claude or Codex compression backend
+                              │
+                              ▼
+                    DistilledClaims (Zod)
+                              │
+EvidenceBundle + session metadata
+                └─────────────┤
+                              ▼
+                    deterministic packet builder
+                              │
+                              ▼
+                     HandoffPacket (Zod)
+                              │
+                 Redis/in-memory store ──► next agent
+```
+
+The model supplies only reasoning that cannot be recovered directly from disk:
+the current summary, decisions, constraints, next actions, pitfalls, and focus
+files. Baton fills changed files, command exit codes, provider identities, and
+the verification command from deterministic evidence. If model distillation
+fails or returns invalid JSON, Baton emits a deterministic fallback packet
+instead of abandoning the transfer.
 
 The local control server binds to loopback only (`127.0.0.1`) and accepts
 browser/WebSocket traffic from the configured dashboard origin.
@@ -219,9 +254,9 @@ TypeScript · Node.js · React · Vite · Redis · WebSocket · Zod · Claude ·
 
 **Near term**
 
-- Real multi-CLI runs with authenticated `claude` + `codex`
-- Session persistence across server restarts
-- BatonBench baseline runs (the Baton side is measured; no-Baton is still empty)
+- Harden and benchmark authenticated `claude` + `codex` runs
+- Restore resumable session state across Baton server restarts
+- A reproducible benchmark with a measured no-Baton baseline for comparison
 - Controlled multi-hop handoffs (A → B → C, each transfer verified)
 - Signed desktop packaging and a user-configurable dock layout
 
@@ -249,3 +284,17 @@ TypeScript · Node.js · React · Vite · Redis · WebSocket · Zod · Claude ·
 
 - Richer verdicts beyond a single exit code (per-test results, coverage deltas,
   lint/type gates) attached to each packet.
+
+---
+
+## Credits
+
+Built at the UC Berkeley AI Hackathon, 2026, by:
+
+- **Syed Mohammad Husain** ([@Myst1C13](https://github.com/Myst1C13))
+- **Michael Lai** ([@Unieggy](https://github.com/Unieggy))
+- **James** ([@jduhking](https://github.com/jduhking))
+
+## License
+
+[MIT](LICENSE) © 2026 Syed Mohammad Husain and Baton contributors.

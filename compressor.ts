@@ -342,7 +342,7 @@ export async function distill(
     return buildPacket(claims, evidence, meta);
   } catch (err) {
     console.warn(
-      `[relay] ⚠️  distillation failed (${err instanceof Error ? err.message : err}) — using deterministic fallback.`
+      `[baton] ⚠️  distillation failed (${err instanceof Error ? err.message : err}) — using deterministic fallback.`
     );
     return buildFallbackPacket(evidence, meta);
   }
@@ -357,7 +357,7 @@ function readMock(file: string): string {
 }
 
 async function main(): Promise<void> {
-  console.log(`[relay] workspace : ${WORKSPACE_DIR}`);
+  console.log(`[baton] workspace : ${WORKSPACE_DIR}`);
 
   // 1. Build the runtime context (in prod: from the live session).
   const stderr = readMock(MOCK_STDERR_FILE);
@@ -371,10 +371,10 @@ async function main(): Promise<void> {
   };
 
   // 2. Collect evidence (fresh git facts + the runtime context).
-  console.log("[relay] collecting evidence…");
+  console.log("[baton] collecting evidence…");
   const evidence = collectEvidence(WORKSPACE_DIR, runtime);
   console.log(
-    `[relay]   branch: ${evidence.branch} | files: ${evidence.changedFiles.length} | ask: ${evidence.goal ? "yes" : "none"} | failure: ${evidence.latestFailure ? "yes" : "no"}`
+    `[baton]   branch: ${evidence.branch} | files: ${evidence.changedFiles.length} | ask: ${evidence.goal ? "yes" : "none"} | failure: ${evidence.latestFailure ? "yes" : "no"}`
   );
 
   // 3. Distill (the single-input contract the orchestrator uses).
@@ -386,7 +386,7 @@ async function main(): Promise<void> {
     verificationCommand: VERIFY_COMMAND,
     sourceTokens: SOURCE_TOKENS_OVERRIDE ?? approxTokens(evidenceText(evidence)),
   };
-  console.log(`[relay] distilling via ${COMPRESS_BACKEND_NAME} (${COMPRESSOR_MODEL})…`);
+  console.log(`[baton] distilling via ${COMPRESS_BACKEND_NAME} (${COMPRESSOR_MODEL})…`);
   const packet = await distill(evidence, meta);
 
   // 4. Write the handoff.
@@ -394,14 +394,14 @@ async function main(): Promise<void> {
 
   const m = packet.metrics;
   console.log(
-    `\n[relay] ✅ wrote ${HANDOFF_FILE}\n[relay]   ${m.sourceTokens} → ${m.packetTokens} tokens (${m.reductionPercent}% reduction, confidence ${m.confidence})\n`
+    `\n[baton] ✅ wrote ${HANDOFF_FILE}\n[baton]   ${m.sourceTokens} → ${m.packetTokens} tokens (${m.reductionPercent}% reduction, confidence ${m.confidence})\n`
   );
   console.log(JSON.stringify(packet, null, 2));
 }
 
 if (require.main === module) {
   main().catch((err) => {
-    console.error("\n[relay] ❌ distiller crashed:\n", err.message || err);
+    console.error("\n[baton] ❌ distiller crashed:\n", err.message || err);
     process.exit(1);
   });
 }

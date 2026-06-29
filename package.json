@@ -1,7 +1,8 @@
 {
-  "name": "relay",
-  "version": "1.0.0",
-  "description": "Provider-neutral AI coding-session handoff engine",
+  "name": "baton-agent-handoff",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local, provider-neutral handoffs between AI coding agents",
   "main": "index.js",
   "workspaces": [
     "apps/*"
@@ -20,9 +21,15 @@
     "ws:client": "tsx ws-test-client.ts",
     "ws:test": "node --import tsx --test ws-test-client.test.ts"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "keywords": [
+    "ai-agents",
+    "developer-tools",
+    "claude-code",
+    "codex",
+    "typescript"
+  ],
+  "author": "Syed Mohammad Husain",
+  "license": "MIT",
   "type": "commonjs",
   "devDependencies": {
     "@types/node": "^26.0.0",

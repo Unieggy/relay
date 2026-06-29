@@ -4,7 +4,7 @@
  * With the current (buggy) `applyMigration`, the re-run and data-preservation
  * tests FAIL — the second ALTER throws `duplicate column name: age`. Once the
  * migration is made idempotent they all pass. This is the deterministic bug the
- * Relay demo hands off from Claude to Codex.
+ * Baton demo hands off from Claude to Codex.
  *
  * Run:  npm test     (from demo-repo/)
  */

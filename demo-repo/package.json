@@ -1,5 +1,5 @@
 {
-  "name": "relay-demo-repo",
+  "name": "baton-demo-repo",
   "version": "0.0.0",
   "private": true,
   "description": "Deterministic demo target: make the users.age migration safe to re-run.",

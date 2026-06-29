@@ -32,6 +32,13 @@ const EnvSchema = z.object({
     .enum(["0", "1", "true", "false"])
     .optional()
     .transform((v) => v === "1" || v === "true"),
+  /** Automatic handoff on a detected limit (rate-limit/crash/context). On by
+   *  default — the bundled demo relies on it. Set `0`/`false` to keep the
+   *  active agent running until the user clicks Switch (manual control). */
+  RELAY_AUTO_HANDOFF: z
+    .enum(["0", "1", "true", "false"])
+    .default("1")
+    .transform((v) => v === "1" || v === "true"),
   NODE_ENV: z
     .enum(["development", "test", "production"])
     .default("development"),

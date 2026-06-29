@@ -1,5 +1,5 @@
 /**
- * Relay — one-command demo launcher.
+ * Baton - one-command demo launcher.
  *
  * Starts the orchestration server (fake agents by default, so the full handoff
  * loop runs with no provider CLI/auth) and the Vite dashboard, then prints the
@@ -93,7 +93,7 @@ run(
 
 setTimeout(() => {
   console.log("\n────────────────────────────────────────────────────────");
-  console.log("  Relay demo");
+  console.log("  Baton demo");
   console.log(`  Dashboard : ${WEB_URL}/?api=http://127.0.0.1:${API_PORT}&ws=ws://127.0.0.1:${API_PORT}`);
   console.log(`  Server    : http://127.0.0.1:${API_PORT}  (fake agents: ${fake !== "0"})`);
   console.log("  Ctrl-C to stop both.");

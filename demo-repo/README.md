@@ -1,7 +1,7 @@
-# demo-repo — the Relay handoff target
+# demo-repo — the Baton handoff target
 
-A small, self-contained, **deterministic** repository used by the Relay demo. An
-agent (Claude) starts fixing a real bug, a focused test stays red, Relay hands
+A small, self-contained, **deterministic** repository used by the Baton demo. An
+agent (Claude) starts fixing a real bug, a focused test stays red, Baton hands
 off to a second agent (Codex), and the verification command proves the result.
 
 No native dependencies — an in-memory `DB` (`db.ts`) models the one SQLite

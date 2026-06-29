@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { demoPacket } from "./demo";
-import { useRelayStream } from "./useRelayStream";
-import { deriveBench, type BenchRow } from "./bench";
+import { useRelayStream, type StreamStatus } from "./useRelayStream";
 import {
   activeAgent,
   activeSupportsInput,
@@ -151,23 +150,26 @@ function Terminal({
             {line.value || " "}
           </div>
         ))}
-        {interactive ? (
-          <form className="term-input" onSubmit={submit}>
-            <span className="term-caret">$</span>
-            <input
-              ref={inputRef}
-              value={draft}
-              onChange={(event) => setDraft(event.target.value)}
-              placeholder="type to message the active agent…"
-              spellCheck={false}
-              autoComplete="off"
-              autoFocus
-            />
-          </form>
-        ) : (
-          phase !== "switching" && <span className="cursor" />
-        )}
+        {!interactive && phase !== "switching" && <span className="cursor" />}
       </div>
+      {interactive && (
+        <form className="chat-dock" onSubmit={submit}>
+          <span className="chat-label">CHAT</span>
+          <input
+            ref={inputRef}
+            className="chat-input"
+            value={draft}
+            onChange={(event) => setDraft(event.target.value)}
+            placeholder="message the active agent…"
+            spellCheck={false}
+            autoComplete="off"
+            autoFocus
+          />
+          <button type="submit" className="chat-send" disabled={!draft.trim()}>
+            Send
+          </button>
+        </form>
+      )}
     </section>
   );
 }
@@ -183,7 +185,7 @@ function Rail({
   activity,
   activityLabel = "NOW",
   packet,
-  bench,
+  streamStatus = "idle",
   verifyLabel,
   verifyEditable = false,
   onVerifyChange,
@@ -200,7 +202,7 @@ function Rail({
   activity: string;
   activityLabel?: string;
   packet: HandoffPacket | null;
-  bench: BenchRow[];
+  streamStatus?: StreamStatus;
   verifyLabel: string;
   verifyEditable?: boolean;
   onVerifyChange?: (value: string) => void;
@@ -237,6 +239,17 @@ function Rail({
       </header>
 
       <div className="rail-body">
+        {live && streamStatus !== "open" && (
+          <div className={`connection-banner ${streamStatus}`} role="status">
+            <span className="connection-dot" />
+            <span>
+              {streamStatus === "connecting"
+                ? "Connecting to the local session..."
+                : "Live connection lost. Reconnecting..."}
+            </span>
+          </div>
+        )}
+
         <div className="agent">
           <span className={`glyph ${agent.tone} ${phase}`}>
             {isCodex ? agent.letter : <ClaudeMark size={22} />}
@@ -348,32 +361,6 @@ function Rail({
           )}
         </div>
 
-        <details className="bench">
-          <summary>BatonBench</summary>
-          <table className="bench-table">
-            <thead>
-              <tr>
-                <th></th>
-                <th>No Baton</th>
-                <th>Baton</th>
-              </tr>
-            </thead>
-            <tbody>
-              {bench.map((row) => (
-                <tr key={row.label}>
-                  <td>{row.label}</td>
-                  <td className={row.without == null ? "nm" : ""}>
-                    {row.without ?? "not measured"}
-                  </td>
-                  <td className={row.withRelay == null ? "nm" : "val"}>
-                    {row.withRelay ?? "not measured"}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </details>
-
         {controls}
       </div>
 
@@ -382,7 +369,7 @@ function Rail({
 }
 
 // ?live=<sessionId>&ws=<wsBase> switches the UI to the real broadcaster.
-// ?rail=1 renders only the Relay rail — the docked terminal-companion sidebar.
+// ?rail=1 renders only the Baton rail - the docked terminal-companion sidebar.
 function liveConfig(): {
   sessionId: string | null;
   base: string;
@@ -594,7 +581,6 @@ export function App() {
   const lines = isLive ? liveLines : readyLines;
   const handoffDone = isLive ? packetReady(events) : false;
   const packet = isLive ? latestHandoffPacket(events) : null;
-  const bench = deriveBench(isLive ? events : [], packet);
   const selectedActiveAgent = isLive && events.length ? activeAgent(events) : initialAgent;
   const switchTarget = otherAgent(selectedActiveAgent);
   const sessionComplete = isLive && events.some((event) => event.type === "session.completed");
@@ -621,7 +607,7 @@ export function App() {
     params.set("api", apiBase);
     params.set("ws", wsBase);
     const url = `${window.location.origin}/?${params.toString()}`;
-    window.open(url, "relay-logs", "width=900,height=640");
+    window.open(url, "baton-logs", "width=900,height=640");
   }
   const controls = (
     <div className="controls" aria-label="Session controls">
@@ -765,7 +751,14 @@ export function App() {
                 pendingAction !== null || phase === "switching" || sessionTerminal
               }
             >
-              Verify
+              {pendingAction === "verify" ? (
+                <>
+                  <span className="spinner dark" />
+                  Verifying
+                </>
+              ) : (
+                "Verify"
+              )}
             </button>
           </div>
           <button type="button" className="action" onClick={openLogs}>
@@ -803,7 +796,7 @@ export function App() {
           activity={activity}
           activityLabel={isLive ? "NOW" : "GOAL"}
           packet={packet}
-          bench={bench}
+          streamStatus={status}
           verifyLabel={verificationCommand}
           verifyEditable={!isLive}
           onVerifyChange={setVerificationCommand}

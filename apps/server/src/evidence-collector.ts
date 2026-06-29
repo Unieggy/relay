@@ -90,8 +90,10 @@ export function collectGitFacts(dir: string): GitFacts {
     };
   }
   const branch = git(["rev-parse", "--abbrev-ref", "HEAD"], dir) || "(unknown)";
-  const gitStatus = git(["status", "--porcelain"], dir);
-  const gitDiff = git(["diff"], dir);
+  // Scope evidence to the selected workspace. This matters when Baton is aimed
+  // at a package or fixture nested inside a larger repository.
+  const gitStatus = git(["status", "--porcelain", "--", "."], dir);
+  const gitDiff = git(["diff", "--", "."], dir);
   return {
     isGitRepo: true,
     branch,

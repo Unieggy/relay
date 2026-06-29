@@ -43,8 +43,8 @@ broadcaster.attach(server);
 
 const port = Number(process.env.PORT ?? 4100);
 server.listen(port, () => {
-  console.log(`[relay:ws-demo] WS:    ws://localhost:${port}/ws/sessions/:id`);
+  console.log(`[baton:ws-demo] WS:    ws://localhost:${port}/ws/sessions/:id`);
   console.log(
-    `[relay:ws-demo] EMIT:  POST http://localhost:${port}/_debug/sessions/:id/emit`
+    `[baton:ws-demo] EMIT:  POST http://localhost:${port}/_debug/sessions/:id/emit`
   );
 });

@@ -102,7 +102,7 @@ export function sendError(res: http.ServerResponse, err: unknown): void {
   }
   const { statusCode, body, headers, unexpected } = toErrorResponse(err);
   if (unexpected) {
-    console.error("[relay:api] unhandled request error:", err);
+    console.error("[baton:api] unhandled request error:", err);
   }
   sendJson(res, statusCode, body, headers);
 }

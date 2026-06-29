@@ -1,8 +1,8 @@
 {
-  "name": "@relay/server",
+  "name": "@baton/server",
   "version": "0.1.0",
   "private": true,
-  "description": "Relay orchestration server (Node + TypeScript).",
+  "description": "Baton orchestration server (Node + TypeScript).",
   "type": "commonjs",
   "scripts": {
     "dev": "tsx watch src/index.ts",

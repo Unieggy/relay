@@ -16,10 +16,10 @@ function installGracefulShutdown(runtime: AppRuntime): void {
   const shutdown = async (signal: string): Promise<void> => {
     if (shuttingDown) return;
     shuttingDown = true;
-    console.log(`[relay:server] ${signal} received — shutting down…`);
+    console.log(`[baton:server] ${signal} received — shutting down…`);
 
     const forceTimer = setTimeout(() => {
-      console.error("[relay:server] shutdown timed out — forcing exit.");
+      console.error("[baton:server] shutdown timed out — forcing exit.");
       process.exit(1);
     }, 10_000);
     forceTimer.unref();
@@ -27,11 +27,11 @@ function installGracefulShutdown(runtime: AppRuntime): void {
     try {
       await runtime.close();
       clearTimeout(forceTimer);
-      console.log("[relay:server] closed cleanly.");
+      console.log("[baton:server] closed cleanly.");
       process.exit(0);
     } catch (err) {
       clearTimeout(forceTimer);
-      console.error("[relay:server] error during shutdown:", err);
+      console.error("[baton:server] error during shutdown:", err);
       process.exit(1);
     }
   };
@@ -47,7 +47,7 @@ function main(): void {
 
   server.listen(env.PORT, env.HOST, () => {
     console.log(
-      `[relay:server] listening on http://${env.HOST}:${env.PORT} (web=${env.WEB_URL})`
+      `[baton:server] listening on http://${env.HOST}:${env.PORT} (web=${env.WEB_URL})`
     );
   });
 

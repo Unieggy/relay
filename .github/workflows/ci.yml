@@ -1,4 +1,4 @@
-name: Relay CI
+name: Baton CI
 
 on:
   pull_request:

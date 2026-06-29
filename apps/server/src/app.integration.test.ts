@@ -23,7 +23,7 @@ test("the production app mounts sessions and the session WebSocket", async () =>
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        goal: "Complete the Relay demo.",
+        goal: "Complete the Baton demo.",
         verificationCommand: "npm test",
         workspaceDir: process.cwd(),
       }),

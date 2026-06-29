@@ -154,6 +154,9 @@ export function createAppRuntime(
       sessions,
       store,
       adapters,
+      // 0 = manual: the active agent keeps the baton until the user clicks
+      // Switch. Default 1 preserves the bundled auto-handoff demo.
+      maxAutomaticHandoffs: env.RELAY_AUTO_HANDOFF ? 1 : 0,
       // Demo mode must never invoke a real provider merely to distill context.
       createHandoff: env.RELAY_FAKE_AGENTS
         ? fallbackCreateHandoff
@@ -178,7 +181,7 @@ export function createAppRuntime(
       const { statusCode, body, headers, unexpected } = toErrorResponse(err);
       if (unexpected) {
         // Log the real error server-side; clients only ever see the envelope.
-        console.error("[relay:server] unhandled request error:", err);
+        console.error("[baton:server] unhandled request error:", err);
       }
       if (res.headersSent) {
         res.end();
